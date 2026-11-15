@@ -1,0 +1,20 @@
+VariantDesk
+Copyright 2026 The VariantDesk contributors
+
+This product is licensed under the Apache License, Version 2.0 (see LICENSE).
+
+Bundled data
+------------
+data/geo/*.json are derived from GeoNames postal code data (https://www.geonames.org/),
+licensed under Creative Commons Attribution 4.0 (CC BY 4.0). Only 3-digit postal prefix
+and city/district centroids are included.
+
+External knowledge sources (queried at runtime, not redistributed)
+-----------------------------------------------------------------
+- ClinVar, PubMed — U.S. National Library of Medicine (public domain; NCBI usage policies apply)
+- Ensembl VEP REST API — EMBL-EBI (Apache 2.0; fair-use rate limits apply)
+- gnomAD (via Ensembl VEP) — Broad Institute (ODbL / open)
+- CIViC — civicdb.org (CC0 1.0)
+- CPIC — cpicpgx.org (CC0 1.0)
+- ClinicalTrials.gov API — U.S. National Library of Medicine (public domain)
+Users are responsible for complying with each source's terms of use.

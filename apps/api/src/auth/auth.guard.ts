@@ -18,8 +18,7 @@ export class AuthGuard implements CanActivate {
 
     const req = ctx.switchToHttp().getRequest();
     const header: string | undefined = req.headers.authorization;
-    // Allow ?token= for direct PDF downloads opened in a new tab.
-    const token = header?.startsWith('Bearer ') ? header.slice(7) : (req.query?.token as string | undefined);
+    const token = header?.startsWith('Bearer ') ? header.slice(7) : undefined;
     if (!token) throw new UnauthorizedException();
 
     let payload: { sub: string };

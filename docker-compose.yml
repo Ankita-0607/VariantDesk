@@ -1,0 +1,33 @@
+# Small-lab deployment: one app container + PostgreSQL.
+#   cp .env.example .env   # then edit JWT_SECRET, SEED_USERS and (optionally) AI settings
+#   docker compose up -d   # open http://localhost:3000
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: variantdesk
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-variantdesk}
+      POSTGRES_DB: variantdesk
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U variantdesk"]
+      interval: 5s
+      retries: 10
+    restart: unless-stopped
+
+  app:
+    build: .
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://variantdesk:${POSTGRES_PASSWORD:-variantdesk}@db:5432/variantdesk
+      CORS_ORIGIN: http://localhost:3000
+    ports:
+      - "3000:3000"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  pgdata:
