@@ -1,0 +1,297 @@
+// VariantDesk data model.
+// Design rules:
+//  * No direct identifiers (names, MRN, full DOB, full ZIP/PIN) are ever stored.
+//  * Evidence is soft-deleted so the audit trail stays complete.
+//  * Every AI call is recorded in AiRun; every human action in AuditEvent (hash-chained).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  ANALYST
+  LAB_DIRECTOR
+}
+
+enum CaseStatus {
+  QUEUED
+  PROCESSING
+  READY
+  FAILED
+}
+
+enum ReportStatus {
+  DRAFT
+  IN_REVIEW
+  RETURNED
+  SIGNED
+  SUPERSEDED
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String
+  role         Role
+  passwordHash String
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+}
+
+model Case {
+  id           String     @id @default(cuid())
+  /// Lab accession / de-identified case code. Never a patient name or MRN.
+  caseCode     String     @unique
+  status       CaseStatus @default(QUEUED)
+  progress     Json       @default("[]")
+  error        String?
+  /// tumor | germline | tumor_normal
+  sampleType   String
+  /// GRCh38 | GRCh37
+  genomeBuild  String
+  assay        String?
+  /// De-identified patient profile (age band, sex, diagnosis, prior therapies, ECOG...)
+  patient      Json
+  /// { country: US|IN, kind: zip3|pin3|city, value, label, lat, lon } — coarse only
+  location     Json?
+  /// AI/rule-normalised diagnosis { code, label, method, aiRunId? }
+  diagnosis    Json?
+  vcfFileName  String
+  vcfSha256    String
+  vcfStats     Json?
+  createdById  String
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  variants  Variant[]
+  evidence  Evidence[]
+  pgx       PgxResult[]
+  trials    TrialMatch[]
+  reports   Report[]
+}
+
+model Variant {
+  id            String   @id @default(cuid())
+  caseId        String
+  case          Case     @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  chrom         String
+  pos           Int
+  ref           String
+  alt           String
+  rsId          String?
+  filter        String?
+  genotype      String?
+  zygosity      String?
+  vaf           Float?
+  depth         Int?
+  gene          String?
+  transcript    String?
+  hgvsc         String?
+  hgvsp         String?
+  /// one-letter protein change e.g. V600E (used for CIViC matching)
+  proteinShort  String?
+  consequence   String?
+  impact        String?
+  annotation    Json?
+  /// population frequencies (gnomAD via VEP), incl. South Asian
+  popFreq       Json?
+  /// rule-engine output { germline?: {...}, somatic?: {...} }
+  classification Json?
+  /// human override { lens, value, reason, by, at }
+  override      Json?
+  reportable    Boolean  @default(false)
+  analystNote   String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  evidence Evidence[]
+
+  @@index([caseId])
+}
+
+model Evidence {
+  id            String   @id @default(cuid())
+  caseId        String
+  case          Case     @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  variantId     String?
+  variant       Variant? @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  /// CLINVAR | CIVIC | CPIC | GNOMAD | PUBMED | VEP | MANUAL
+  source        String
+  sourceId      String?
+  url           String?
+  /// PATHOGENICITY | THERAPEUTIC | PROGNOSTIC | DIAGNOSTIC | PGX | POPULATION | LITERATURE | FUNCTIONAL | OTHER
+  category      String
+  level         String?
+  significance  String?
+  direction     String?
+  disease       String?
+  therapies     Json     @default("[]")
+  summary       String
+  citation      String?
+  sourceVersion String?
+  retrievedAt   DateTime?
+  /// AUTO (matched by pipeline) | MANUAL (added by a human)
+  origin        String   @default("AUTO")
+  /// ACTIVE | DELETED (soft delete keeps audit history)
+  status        String   @default("ACTIVE")
+  includeInReport Boolean @default(true)
+  /// AI triage { relevance: HIGH|MEDIUM|LOW, rationale, aiRunId, decision: PENDING|ACCEPTED|REJECTED }
+  ai            Json?
+  deleteReason  String?
+  createdById   String?
+  updatedById   String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([caseId])
+  @@index([variantId])
+}
+
+model PgxResult {
+  id            String   @id @default(cuid())
+  caseId        String
+  case          Case     @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  gene          String
+  diplotype     String?
+  phenotype     String?
+  activityScore String?
+  calledVariants Json    @default("[]")
+  caveats       Json     @default("[]")
+  recommendations Json   @default("[]")
+  includeInReport Boolean @default(true)
+  createdAt     DateTime @default(now())
+
+  @@index([caseId])
+}
+
+model TrialMatch {
+  id            String   @id @default(cuid())
+  caseId        String
+  case          Case     @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  nctId         String
+  title         String
+  phase         String?
+  status        String?
+  conditions    Json     @default("[]")
+  interventions Json     @default("[]")
+  matchedTerms  Json     @default("[]")
+  nearestSite   Json?
+  distanceKm    Float?
+  sites         Json     @default("[]")
+  eligibility   String?
+  minAge        String?
+  maxAge        String?
+  sex           String?
+  /// AI pre-screen { verdict, reasons:[{criterion, assessment}], aiRunId, decision }
+  aiScreen      Json?
+  includeInReport Boolean @default(false)
+  hidden        Boolean  @default(false)
+  createdAt     DateTime @default(now())
+
+  @@unique([caseId, nctId])
+  @@index([caseId])
+}
+
+model Report {
+  id            String       @id @default(cuid())
+  caseId        String
+  case          Case         @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  version       Int
+  status        ReportStatus @default(DRAFT)
+  /// Editable narrative sections { summary, methodology, limitations, ... } + provenance of AI text
+  content       Json
+  templateId    String?
+  submittedById String?
+  submittedAt   DateTime?
+  reviewComment String?
+  signedById    String?
+  signedAt      DateTime?
+  /// Frozen snapshot of all report data at signing time
+  snapshot      Json?
+  pdfSha256     String?
+  pdf           Bytes?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  @@unique([caseId, version])
+}
+
+model ReportTemplate {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  isDefault Boolean  @default(false)
+  /// { primaryColor, accentColor, textColor, fontSize, labName, labAddress, accreditation, headerText, footerText, logoDataUrl }
+  theme     Json
+  /// [{ key, title, enabled }] ordered
+  sections  Json
+  updatedById String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+/// Append-only, hash-chained audit log of every human/system action.
+model AuditEvent {
+  seq        Int      @id @default(autoincrement())
+  at         DateTime @default(now())
+  actorId    String?
+  actorEmail String?
+  actorRole  String?
+  action     String
+  entityType String
+  entityId   String?
+  caseId     String?
+  before     Json?
+  after      Json?
+  reason     String?
+  prevHash   String
+  hash       String   @unique
+
+  @@index([caseId])
+  @@index([entityType, entityId])
+}
+
+/// Every LLM invocation: redacted input, raw output, guardrail verdicts, human decision.
+model AiRun {
+  id            String   @id @default(cuid())
+  at            DateTime @default(now())
+  caseId        String?
+  task          String
+  provider      String
+  model         String?
+  promptVersion String
+  promptHash    String
+  input         Json
+  outputRaw     String?
+  output        Json?
+  /// [{ name, passed, detail }]
+  guardrails    Json     @default("[]")
+  /// PASSED | BLOCKED | FALLBACK | ERROR | DISABLED
+  status        String
+  error         String?
+  latencyMs     Int?
+  tokensIn      Int?
+  tokensOut     Int?
+  attempts      Int      @default(1)
+  /// PENDING | ACCEPTED | REJECTED | EDITED | NOT_REQUIRED
+  humanDecision String   @default("PENDING")
+  decidedById   String?
+  decidedAt     DateTime?
+  decisionNote  String?
+
+  @@index([caseId])
+  @@index([task])
+}
+
+/// Cache of external knowledge-base responses (provenance + offline operation).
+model KbCache {
+  key       String   @id
+  source    String
+  response  Json
+  fetchedAt DateTime @default(now())
+}

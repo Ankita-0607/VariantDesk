@@ -1,0 +1,18 @@
+{
+  "caseCode": "DEMO-LUNG-001",
+  "sampleType": "tumor",
+  "genomeBuild": "GRCh38",
+  "assay": "Targeted solid-tumour panel (synthetic demo)",
+  "patient": {
+    "ageYears": 61,
+    "sex": "female",
+    "diagnosis": "Metastatic lung adenocarcinoma",
+    "stage": "IV",
+    "indication": "Therapy selection",
+    "priorTherapies": [],
+    "currentMedications": ["clopidogrel"],
+    "ecog": 1,
+    "ancestry": "south_asian"
+  },
+  "location": { "country": "IN", "kind": "pin3", "value": "411" }
+}

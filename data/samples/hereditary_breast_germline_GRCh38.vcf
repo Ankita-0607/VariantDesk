@@ -1,0 +1,14 @@
+##fileformat=VCFv4.2
+##reference=GRCh38
+##source=VariantDesk synthetic example (not from a real patient)
+##INFO=<ID=DP,Number=1,Type=Integer,Description="Total depth">
+##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">
+##FORMAT=<ID=AD,Number=R,Type=Integer,Description="Allelic depths">
+##FORMAT=<ID=DP,Number=1,Type=Integer,Description="Read depth">
+#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	SAMPLE
+chr10	94781859	rs4244285	G	A	60	PASS	DP=302	GT:AD:DP	1/1:2,300:302
+chr11	108329202	.	G	A	60	PASS	DP=238	GT:AD:DP	0/1:120,118:238
+chr13	32332592	rs144848	A	C	60	PASS	DP=290	GT:AD:DP	0/1:150,140:290
+chr13	32340300	.	GT	G	60	PASS	DP=251	GT:AD:DP	0/1:130,121:251
+chr17	43092919	.	G	A	60	PASS	DP=276	GT:AD:DP	0/1:140,136:276
+chr17	43124027	.	ACT	A	60	PASS	DP=309	GT:AD:DP	0/1:160,149:309

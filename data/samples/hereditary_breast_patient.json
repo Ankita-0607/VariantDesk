@@ -1,0 +1,16 @@
+{
+  "caseCode": "DEMO-HBOC-001",
+  "sampleType": "germline",
+  "genomeBuild": "GRCh38",
+  "assay": "Hereditary cancer panel (synthetic demo)",
+  "patient": {
+    "ageYears": 42,
+    "sex": "female",
+    "diagnosis": "Breast cancer, triple negative",
+    "indication": "Hereditary cancer risk assessment; family history of breast and ovarian cancer",
+    "priorTherapies": ["doxorubicin", "cyclophosphamide"],
+    "currentMedications": [],
+    "ancestry": "european"
+  },
+  "location": { "country": "US", "kind": "zip3", "value": "021" }
+}
